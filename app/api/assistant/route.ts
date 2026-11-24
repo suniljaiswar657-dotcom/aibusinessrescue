@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!supabaseUrl || !supabaseAnonKey) return NextResponse.json({ error: "Supabase authentication is not configured." }, { status: 503 });
+  if (!token) return NextResponse.json({ error: "Sign in to use the AI assistant." }, { status: 401 });
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) return NextResponse.json({ error: "Your session is invalid. Please sign in again." }, { status: 401 });
+
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "AI assistant is not configured yet. Add OPENAI_API_KEY on the server." }, { status: 503 });
   try {
