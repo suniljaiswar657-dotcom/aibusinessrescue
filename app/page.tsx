@@ -72,8 +72,13 @@ export default function Home() {
   }
   async function askAI(e:FormEvent) {
     e.preventDefault(); setAiBusy(true); setAiAnswer("");
-    try { const r=await fetch("/api/assistant",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:aiPrompt})}); const d=await r.json(); setAiAnswer(d.answer || d.error || "No response."); }
-    catch {setAiAnswer("AI service unavailable. Try again.");}
+    try {
+      const sb=getSupabase();
+      const {data:{session}} = sb ? await sb.auth.getSession() : {data:{session:null}};
+      if (!session) { setAiAnswer("AI assistant use karne ke liye pehle sign in karo."); setAiBusy(false); return; }
+      const r=await fetch("/api/assistant",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${session.access_token}`},body:JSON.stringify({prompt:aiPrompt})});
+      const d=await r.json(); setAiAnswer(d.answer || d.error || "No response.");
+    } catch {setAiAnswer("AI service unavailable. Try again.");}
     setAiBusy(false);
   }
   async function signOut(){const sb=getSupabase(); if(sb) await sb.auth.signOut(); setUser(null); setLeads([]);}
